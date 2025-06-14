@@ -8,7 +8,10 @@ public class Test : MonoBehaviour
 {
     private void Awake()
     {
-        UIManager.Instance.Init();
+       // UIManager.Instance.Init();
+        //ResourceManager.Instance.Init();
+        
+        //ResourceManager.Instance.LoadUI("AccountUI");
     }
 
     void Start()

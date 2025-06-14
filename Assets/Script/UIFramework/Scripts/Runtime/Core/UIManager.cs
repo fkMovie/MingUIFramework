@@ -53,8 +53,9 @@ namespace Ming_UIFramework
 
         public void Init()
         {
-            m_UICamera = GameObject.Find("UICamera").GetComponent<Camera>();
-            m_UIRoot = GameObject.Find("UIRoot").transform;
+            GameObject go = Resources.Load<GameObject>("UIRoot");
+            m_UIRoot = GameObject.Instantiate(go).transform;
+            m_UIRoot.gameObject.name = "UIRoot";
             m_UIConfig = Resources.Load<UIConfig>("UIConfig");
 #if UNITY_EDITOR
             m_UIConfig.GenerateUIConfig();
@@ -66,27 +67,27 @@ namespace Ming_UIFramework
 
         public void PreloadUI<T>() where T : UIBase, new()
         {
-            if(GetUIIsLoaded<T>()) return;
+            if (GetUIIsLoaded<T>()) return;
             Type type = typeof(T);
             string uiName = type.Name;
             T uiBase = new T();
-            GameObject uiObj = TempLoadUIByResource(uiName);
+            GameObject uiObj = ResourceManager.Instance.LoadUI(uiName, m_UIRoot);
             if (!uiObj)
             {
                 Debug.LogError($"预加载窗口失败：{uiObj.name}");
                 return;
             }
-            
+
             //初始化该UI
             uiBase.gameObject = uiObj;
             uiBase.transform = uiObj.transform;
             uiBase.canvas = uiObj.GetComponent<Canvas>();
             uiBase.canvas.worldCamera = m_UICamera;
-            uiBase.Name = uiName;   
+            uiBase.Name = uiName;
             uiBase.OnAwake();
             uiBase.SetVisiable(false);
- 
-  
+
+
             RectTransform rectTran = uiObj.GetComponent<RectTransform>();
             rectTran.anchorMax = Vector2.one;
             rectTran.offsetMax = Vector2.zero;
@@ -217,9 +218,8 @@ namespace Ming_UIFramework
                 SetUIMaskVisable();
                 ui.OnHide();
                 m_VisableUIList.Remove(ui);
-                
+
                 PopNextStackUI(ui);
-                
             }
             else
             {
@@ -230,7 +230,8 @@ namespace Ming_UIFramework
         private UIBase InitUI(UIBase uiBase, string uiName)
         {
             //初始化该UI
-            GameObject newUI = TempLoadUIByResource(uiName);
+            GameObject newUI = ResourceManager.Instance.LoadUI(uiName, m_UIRoot);
+            ;
             uiBase.gameObject = newUI;
             uiBase.transform = newUI.transform;
             uiBase.canvas = newUI.GetComponent<Canvas>();
@@ -239,7 +240,7 @@ namespace Ming_UIFramework
             uiBase.transform.SetAsLastSibling();
             uiBase.OnAwake();
             uiBase.SetVisiable(true);
-  
+
             RectTransform rectTran = newUI.GetComponent<RectTransform>();
             rectTran.anchorMax = Vector2.one;
             rectTran.offsetMax = Vector2.zero;
@@ -335,33 +336,17 @@ namespace Ming_UIFramework
                 maxOrderUIBase.SetMaskVisible(true);
             }
         }
-        
-
-        private GameObject TempLoadUIByResource(string uiName)
-        {
-            string path = m_UIConfig.GetUIPath(uiName);
-            GameObject uiPrefab = Resources.Load<GameObject>(path);
-            if (uiPrefab == null) Debug.LogError($"该路径未含对应预制体，请检查路径：{path}");
-
-            GameObject uiObj = GameObject.Instantiate(uiPrefab, m_UIRoot);
-            // uiObj.transform.SetParent(m_UIRoot);
-            uiObj.transform.localScale = Vector3.one;
-            uiObj.transform.localPosition = Vector3.zero;
-            uiObj.transform.localRotation = Quaternion.identity;
-            uiObj.name = uiName;
-            return uiObj;
-        }
 
         #endregion
 
         #region 堆栈系统
-        
+
         /// <summary>
         /// 压栈并开始弹出第一个UI
         /// </summary>
         /// <param name="popCallback"></param>
         /// <typeparam name="T"></typeparam>
-        public void PushAndPopFirstUI<T>(Action<UIBase> popCallback=null) where T:UIBase ,new()
+        public void PushAndPopFirstUI<T>(Action<UIBase> popCallback = null) where T : UIBase, new()
         {
             PushUIToStack<T>(popCallback);
             StartPopFirstUI();
@@ -396,8 +381,8 @@ namespace Ming_UIFramework
         /// <param name="curUI">当前关闭的UI</param>
         public void PopNextStackUI(UIBase curUI)
         {
-            if(curUI==null) return;
-            if(m_isPopingUI||!curUI.IsPopStack) return;
+            if (curUI == null) return;
+            if (m_isPopingUI || !curUI.IsPopStack) return;
             curUI.IsPopStack = false;
             PopStackUI();
         }
@@ -410,9 +395,10 @@ namespace Ming_UIFramework
         {
             if (m_UIQueue.Count == 0)
             {
-                m_isPopingUI=false;
+                m_isPopingUI = false;
                 return false;
             }
+
             UIBase uiBase = m_UIQueue.Dequeue();
             UIBase popUI = OpenUI(uiBase);
             popUI.PopStackListerner = uiBase.PopStackListerner;
@@ -430,6 +416,5 @@ namespace Ming_UIFramework
         }
 
         #endregion
-        
     }
 }
